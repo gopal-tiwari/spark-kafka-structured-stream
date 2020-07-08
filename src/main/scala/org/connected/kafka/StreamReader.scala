@@ -2,10 +2,15 @@ package org.connected.kafka
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.streaming.StreamingQuery
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
 object StreamReader
 {
+
+  def gracefulShutdown(query: StreamingQuery, awaitTerminiationTimeMs: Long)={
+
+  }
 
   def getKafkaStreamDataFrame(spark: SparkSession) =
   {
