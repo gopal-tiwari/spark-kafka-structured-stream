@@ -29,6 +29,24 @@ object StreamReader
         System.exit(0)
       }
 
+      val query = streamWriter.start()
+
+      while (!isStopped)
+      {
+        isStopped = query.awaitTermination(10000)
+        if (isStopped)
+        {
+          println("Query is already stopped")
+          System.exit(0)
+        }
+        stopFlag = if (!stopFlag) hdfs.exists(new Path("/tmp/SHUTDOWN_FILE")) else false
+        if (!isStopped && stopFlag)
+        {
+          println("Shotdown File Found")
+          gracefulShutdown(query, 10000)
+          System.exit(0)
+        }
+      }
 
     } catch
     {
