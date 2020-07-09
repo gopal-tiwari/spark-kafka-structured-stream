@@ -2,9 +2,9 @@ package org.connected.kafka
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.streaming.{StreamingQuery, StreamingQueryException}
+import org.apache.spark.sql.streaming.{DataStreamWriter, StreamingQuery, StreamingQueryException}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.connected.commons.SparkSessionObject.spark
 
@@ -56,7 +56,7 @@ object StreamReader
     }
   }
 
-  def gracefulShutdown(query: StreamingQuery, awaitTerminiationTimeMs: Long) =
+  def gracefulShutdown(query: StreamingQuery, awaitTerminiationTimeMs: Long): Unit =
   {
     while (query.isActive)
     {
@@ -70,7 +70,7 @@ object StreamReader
     }
   }
 
-  def getKafkaStreamDataFrame(spark: SparkSession) =
+  def getKafkaStreamDataFrame(spark: SparkSession): DataFrame =
   {
     val streamingDF = spark
       .readStream
@@ -84,7 +84,7 @@ object StreamReader
     streamingDF.load()
   }
 
-  def streamColumnMapping(kafkaStreamDataframe: DataFrame) =
+  def streamColumnMapping(kafkaStreamDataframe: DataFrame): DataFrame =
   {
     val kafkaDataSchema = StructType(List(
       StructField("dataTimestamp", StringType),
@@ -106,7 +106,7 @@ object StreamReader
     streamingDataWithColumn
   }
 
-  def kafkaHDFSSink(streamingDataFrame: DataFrame) =
+  def kafkaHDFSSink(streamingDataFrame: DataFrame): DataStreamWriter[Row] =
   {
     streamingDataFrame
       .writeStream
