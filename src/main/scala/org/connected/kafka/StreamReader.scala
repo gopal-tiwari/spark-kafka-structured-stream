@@ -9,7 +9,16 @@ object StreamReader
 {
 
   def gracefulShutdown(query: StreamingQuery, awaitTerminiationTimeMs: Long)={
-
+    while(query.isActive)
+      {
+        val msg = query.status.message
+        println("State : " + msg)
+        if((!query.status.isTriggerActive&& !msg.equals("Initializing sources")) || !query.status.isDataAvailable)
+          {
+            query.stop()
+          }
+        query.awaitTermination(awaitTerminiationTimeMs)
+      }
   }
 
   def getKafkaStreamDataFrame(spark: SparkSession) =
