@@ -1,8 +1,10 @@
 package org.connected.kafka
 
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.streaming.StreamingQuery
+import org.apache.spark.sql.streaming.{StreamingQuery, StreamingQueryException}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.connected.commons.SparkSessionObject.spark
 
@@ -14,19 +16,40 @@ object StreamReader
     val stream = getKafkaStreamDataFrame(spark)
     val processedStream = streamColumnMapping(stream)
     val streamWriter = kafkaHDFSSink(processedStream)
+
+    try
+    {
+      val hdfs = FileSystem.get(new Configuration())
+      var stopFlag = false
+      var isStopped = false
+
+      if (hdfs.exists(new Path("/tmp/SHUTDOWN_FILE")))
+      {
+        spark.sql("SELECT 1").show()
+        System.exit(0)
+      }
+
+
+    } catch
+    {
+      case ex: StreamingQueryException =>
+        ex.printStackTrace()
+        System.exit(-1)
+    }
   }
 
-  def gracefulShutdown(query: StreamingQuery, awaitTerminiationTimeMs: Long)={
-    while(query.isActive)
+  def gracefulShutdown(query: StreamingQuery, awaitTerminiationTimeMs: Long) =
+  {
+    while (query.isActive)
+    {
+      val msg = query.status.message
+      println("State : " + msg)
+      if ((!query.status.isTriggerActive && !msg.equals("Initializing sources")) || !query.status.isDataAvailable)
       {
-        val msg = query.status.message
-        println("State : " + msg)
-        if((!query.status.isTriggerActive&& !msg.equals("Initializing sources")) || !query.status.isDataAvailable)
-          {
-            query.stop()
-          }
-        query.awaitTermination(awaitTerminiationTimeMs)
+        query.stop()
       }
+      query.awaitTermination(awaitTerminiationTimeMs)
+    }
   }
 
   def getKafkaStreamDataFrame(spark: SparkSession) =
